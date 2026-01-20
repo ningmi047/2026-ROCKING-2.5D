@@ -1,7 +1,6 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -12,28 +11,40 @@
     <style>
       #start-btn {
         position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-        padding: 15px 30px; background: blue; color: white;
+        padding: 15px 30px; 
+        background: blue; /* 維持藍色，方便你確認是否有更新 */
+        color: white;
         font-size: 20px; font-weight: bold; border: 2px solid white;
         border-radius: 50px; z-index: 9999; display: block;
       }
     </style>
 
     <script>
-      // 等待頁面載入後執行
+      // 👇 這是專門用來「暴力修正」材質的元件
+      AFRAME.registerComponent('force-additive', {
+        init: function () {
+          const el = this.el;
+          
+          // 當材質貼圖載入後，強制修改混合模式
+          el.addEventListener('materialtextureloaded', () => {
+            const mesh = el.getObject3D('mesh');
+            if (mesh && mesh.material) {
+              console.log("🔥 強制啟動金字發光模式 (Additive) 🔥");
+              mesh.material.blending = THREE.AdditiveBlending;
+              mesh.material.transparent = true;
+              mesh.material.depthWrite = false; // 關鍵：不寫入深度，避免擋住後方
+              mesh.material.needsUpdate = true;
+            }
+          });
+        }
+      });
+
+      // 防快取機制
       window.addEventListener('DOMContentLoaded', () => {
-        // 產生一個隨機的時間戳記
         const timestamp = new Date().getTime();
-        
-        // 抓出所有的 video 標籤
-        const videos = document.querySelectorAll('video');
-        
-        videos.forEach(video => {
-          // 取得原本的檔名 (例如 layer_gold.mp4)
+        document.querySelectorAll('video').forEach(video => {
           let currentSrc = video.getAttribute('src');
-          // 加上時間戳記 (變身為 layer_gold.mp4?v=1738291...)
-          // 這樣瀏覽器就會被迫把它當作新檔案重新下載
-          video.setAttribute('src', currentSrc + '?v=' + timestamp);
-          console.log('強制更新影片來源:', video.getAttribute('src'));
+          if (currentSrc) video.setAttribute('src', currentSrc + '?v=' + timestamp);
         });
       });
     </script>
@@ -59,26 +70,24 @@
 
       <a-entity mindar-image-target="targetIndex: 0">
         
-        <a-video 
-          src="#vid-bg" 
-          position="0 0 0" 
-          height="1.5" width="1.5" 
-          material="shader: flat; transparent: true; blending: multiply; depthWrite: false">
-        </a-video>
+        <a-entity 
+          geometry="primitive: plane; height: 1.5; width: 1.5"
+          position="0 0 0"
+          material="shader: flat; src: #vid-bg; transparent: true; blending: multiply; depthWrite: false">
+        </a-entity>
 
-        <a-video 
-          src="#vid-gold"
-          position="0 0 0.1" 
-          height="1.5" width="1.5" 
-          material="shader: flat; transparent: true; blending: additive; depthWrite: false">
-        </a-video>
+        <a-entity 
+          geometry="primitive: plane; height: 1.5; width: 1.5"
+          position="0 0 0.1"
+          material="shader: flat; src: #vid-gold; transparent: true; blending: additive; depthWrite: false"
+          force-additive>
+        </a-entity>
 
-        <a-video 
-          src="#vid-horse"
-          position="0 0 0.2" 
-          height="1.5" width="1.5" 
-          material="shader: flat; transparent: true; blending: multiply; depthWrite: false">
-        </a-video>
+        <a-entity 
+          geometry="primitive: plane; height: 1.5; width: 1.5"
+          position="0 0 0.2"
+          material="shader: flat; src: #vid-horse; transparent: true; blending: multiply; depthWrite: false">
+        </a-entity>
 
       </a-entity>
     </a-scene>
