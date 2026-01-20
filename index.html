@@ -5,10 +5,9 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // 強制加上時間戳記，解決瀏覽器快取舊檔案的問題
+      // 強制更新緩存，確保你看到最新的修改
       window.addEventListener('DOMContentLoaded', () => {
         const timestamp = new Date().getTime();
-        console.log("Current Timestamp: " + timestamp);
         document.querySelectorAll('video').forEach(video => {
           let currentSrc = video.getAttribute('src');
           if (currentSrc) video.setAttribute('src', currentSrc + '?v=' + timestamp);
@@ -17,7 +16,6 @@
     </script>
 
     <style>
-      /* 只有一個播放按鈕，簡單明瞭 */
       #start-btn {
         position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
         padding: 15px 40px; background: red; color: white;
@@ -27,7 +25,7 @@
   </head>
 
   <body>
-    <button id="start-btn">測試：播放紅紙+金字</button>
+    <button id="start-btn">播放 (都設為 Multiply 去掉白底)</button>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
@@ -39,7 +37,7 @@
       <a-assets>
         <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
         
-        <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-front" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -49,13 +47,13 @@
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0"
-          material="shader: flat; src: #vid-bg; transparent: false; blending: normal">
+          material="shader: flat; src: #vid-bg; transparent: true; blending: multiply; depthWrite: false">
         </a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0.1"
-          material="shader: flat; src: #vid-gold; transparent: true; blending: additive; depthWrite: false">
+          material="shader: flat; src: #vid-front; transparent: true; blending: multiply; depthWrite: false">
         </a-entity>
 
       </a-entity>
@@ -64,14 +62,9 @@
     <script>
       const startBtn = document.getElementById('start-btn');
       startBtn.addEventListener('click', function() {
-        // 兩個一起播
-        const bg = document.getElementById('vid-bg');
-        const gold = document.getElementById('vid-gold');
-        
-        bg.play();
-        gold.play();
-        
-        startBtn.style.display = 'none'; // 隱藏按鈕
+        document.getElementById('vid-bg').play();
+        document.getElementById('vid-front').play();
+        startBtn.style.display = 'none';
       });
     </script>
   </body>
