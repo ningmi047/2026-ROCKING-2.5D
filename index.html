@@ -5,20 +5,12 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <style>
+      /* 啟動按鈕 */
       #start-btn {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 15px 30px;
-        background: #D91E18;
-        color: white;
-        font-size: 20px;
-        font-weight: bold;
-        border: 2px solid white;
-        border-radius: 50px;
-        z-index: 9999;
-        display: block;
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        padding: 15px 30px; background: #D91E18; color: white;
+        font-size: 20px; font-weight: bold; border: 2px solid white;
+        border-radius: 50px; z-index: 9999; display: block;
         box-shadow: 0 4px 6px rgba(0,0,0,0.3);
       }
     </style>
@@ -26,23 +18,17 @@
     <script>
       AFRAME.registerShader('chromakey', {
         schema: {
-          src: {type: 'selector'},
+          src: {type: 'map'}, // ⚠️ 改回 map，讓 A-Frame 幫我們處理影片載入
           color: {default: {x: 0.0, y: 1.0, z: 0.0}},
-          threshold: {default: 0.45} // 0.45 是一個很安全的範圍
+          threshold: {default: 0.4}
         },
         init: function (data) {
-          // 建立影片材質
-          var videoTexture = new THREE.VideoTexture(data.src);
-          videoTexture.minFilter = THREE.LinearFilter;
-          videoTexture.format = THREE.RGBAFormat;
-
           this.material = new THREE.ShaderMaterial({
             uniforms: {
-              texture: { type: 't', value: videoTexture },
+              texture: { type: 't', value: data.src }, // 直接接收 A-Frame 處理好的材質
               color: { type: 'c', value: new THREE.Color(data.color) },
               threshold: { type: 'f', value: data.threshold }
             },
-            // ⚠️ 必備：手機精確度設定 (防止變隱形)
             vertexShader: `
               precision mediump float;
               varying vec2 vUv;
@@ -59,14 +45,13 @@
               varying vec2 vUv;
               void main() {
                 vec4 tex = texture2D( texture, vUv );
-                
-                // 計算跟綠色的距離
                 float dist = length(tex.rgb - color);
                 
-                // 如果距離小於門檻，alpha 設為 0.0 (透明)，否則設為 1.0 (不透明)
-                // 使用 step 函數比 if 更快更穩
-                float alpha = step(threshold, dist);
-
+                // 如果是綠色 -> 透明(0.0)，否則 -> 顯示(1.0)
+                float alpha = 1.0;
+                if (dist < threshold) {
+                  alpha = 0.0;
+                }
                 gl_FragColor = vec4(tex.rgb, alpha);
               }
             `,
@@ -77,6 +62,7 @@
         update: function (data) {
           this.material.uniforms.color.value.set(data.color);
           this.material.uniforms.threshold.value = data.threshold;
+          this.material.uniforms.texture.value = data.src; // 更新材質
         }
       });
     </script>
@@ -93,51 +79,38 @@
       device-orientation-permission-ui="enabled: false">
       
       <a-assets>
-        <video id="vid-bg" src="./layer_bg.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline muted></video>
-        <video id="vid-gold" src="./layer_gold.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline muted></video>
-        <video id="vid-spring" src="./layer_spring.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline muted></video>
-        <video id="vid-horse" src="./layer_horse.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline muted></video>
-        <video id="vid-front" src="./layer_front.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline muted></video>
+        <video id="vid-bg" src="./layer_bg.mp4" preload="auto" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-gold" src="./layer_gold.mp4" preload="auto" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-spring" src="./layer_spring.mp4" preload="auto" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-horse" src="./layer_horse.mp4" preload="auto" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-front" src="./layer_front.mp4" preload="auto" loop crossorigin playsinline webkit-playsinline muted></video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0">
         
-        <a-video 
-          src="#vid-bg" 
-          position="0 0 0" 
-          height="0.8" width="0.8" 
-          rotation="0 0 -45">
-        </a-video>
+        <a-video src="#vid-bg" position="0 0 0" height="0.8" width="0.8" rotation="0 0 -45"></a-video>
 
         <a-entity 
           geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-gold; color: 0.0 1.0 0.0; threshold: 0.45" 
-          position="0 0 0.15" 
-          rotation="0 0 -45">
-        </a-entity>
+          material="shader: chromakey; src: #vid-gold; color: 0.0 1.0 0.0; threshold: 0.4" 
+          position="0 0 0.15" rotation="0 0 -45"></a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-spring; color: 0.0 1.0 0.0; threshold: 0.45" 
-          position="0 0 0.25" 
-          rotation="0 0 -45">
-        </a-entity>
+          material="shader: chromakey; src: #vid-spring; color: 0.0 1.0 0.0; threshold: 0.4" 
+          position="0 0 0.25" rotation="0 0 -45"></a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-horse; color: 0.0 1.0 0.0; threshold: 0.45" 
-          position="0 0 0.35" 
-          rotation="0 0 -45">
-        </a-entity>
+          material="shader: chromakey; src: #vid-horse; color: 0.0 1.0 0.0; threshold: 0.4" 
+          position="0 0 0.35" rotation="0 0 -45"></a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-front; color: 0.0 1.0 0.0; threshold: 0.45" 
-          position="0 0 0.55" 
-          rotation="0 0 -45">
-        </a-entity>
+          material="shader: chromakey; src: #vid-front; color: 0.0 1.0 0.0; threshold: 0.4" 
+          position="0 0 0.55" rotation="0 0 -45"></a-entity>
 
       </a-entity>
     </a-scene>
@@ -145,11 +118,7 @@
     <script>
       const startBtn = document.getElementById('start-btn');
       startBtn.addEventListener('click', function() {
-        const videos = document.querySelectorAll('video');
-        videos.forEach(v => {
-          v.muted = false;
-          v.play();
-        });
+        document.querySelectorAll('video').forEach(v => { v.muted = false; v.play(); });
         startBtn.style.display = 'none';
       });
     </script>
