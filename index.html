@@ -10,19 +10,18 @@
         padding: 15px 30px; background: #D91E18; color: white;
         font-size: 20px; font-weight: bold; border: 2px solid white;
         border-radius: 50px; z-index: 9999; display: block;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
       }
     </style>
 
     <script>
-      AFRAME.registerShader('chromakey', {
+      AFRAME.registerShader('chromakey-debug', {
         schema: {
-          src: {type: 'selector'}, // ⚠️ 改回 selector，這比 map 更穩定，確保一定抓得到 video 標籤
+          src: {type: 'selector'},
           color: {default: {x: 0.0, y: 1.0, z: 0.0}},
-          threshold: {default: 0.45}
+          threshold: {default: 0.4},
+          mode: {default: 0} // 0:正常, 1:紅塊測試, 2:原始影片, 3:Alpha檢查
         },
         init: function (data) {
-          // 手動建立影片材質，這是最原始也最不會出錯的方法
           var videoTexture = new THREE.VideoTexture(data.src);
           videoTexture.minFilter = THREE.LinearFilter;
           videoTexture.format = THREE.RGBAFormat;
@@ -31,7 +30,8 @@
             uniforms: {
               texture: { type: 't', value: videoTexture },
               color: { type: 'c', value: new THREE.Color(data.color) },
-              threshold: { type: 'f', value: data.threshold }
+              threshold: { type: 'f', value: data.threshold },
+              mode: { type: 'i', value: data.mode } // 傳入模式
             },
             vertexShader: `
               precision mediump float;
@@ -46,16 +46,33 @@
               uniform sampler2D texture;
               uniform vec3 color;
               uniform float threshold;
+              uniform int mode; // 接收模式
               varying vec2 vUv;
               void main() {
                 vec4 tex = texture2D( texture, vUv );
                 float dist = length(tex.rgb - color);
-                
-                // 簡單暴力的去背判斷
                 float alpha = 1.0;
-                if (dist < threshold) {
-                  alpha = 0.0;
+                if (dist < threshold) { alpha = 0.0; }
+
+                // --- 診斷邏輯 ---
+                if (mode == 1) {
+                  // 模式 1: 強制輸出紅色 (檢查 Shader 是否活著)
+                  gl_FragColor = vec4(1.0, 0.0, 0.0, 0.5); 
+                  return;
                 }
+                else if (mode == 2) {
+                  // 模式 2: 強制輸出原始影片 (檢查有沒有讀到 Texture)
+                  gl_FragColor = vec4(tex.rgb, 1.0);
+                  return;
+                }
+                else if (mode == 3) {
+                  // 模式 3: 視覺化去背範圍 (綠色部分變黑，保留部分變白)
+                  // 如果你看到全黑，代表所有東西都被去背了
+                  gl_FragColor = vec4(vec3(alpha), 0.8); 
+                  return;
+                }
+
+                // 模式 0: 正常去背
                 gl_FragColor = vec4(tex.rgb, alpha);
               }
             `,
@@ -66,14 +83,14 @@
         update: function (data) {
           this.material.uniforms.color.value.set(data.color);
           this.material.uniforms.threshold.value = data.threshold;
-          // 注意：使用 selector 模式時，init 裡面的 videoTexture 會自動跟隨 video 標籤更新，不需要在這裡重設 texture
+          this.material.uniforms.mode.value = data.mode;
         }
       });
     </script>
   </head>
 
   <body>
-    <button id="start-btn">點擊播放 (Play)</button>
+    <button id="start-btn">點擊播放測試</button>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
@@ -83,11 +100,11 @@
       device-orientation-permission-ui="enabled: false">
       
       <a-assets>
-        <video id="vid-bg" src="./layer_bg.mp4" preload="auto" loop crossorigin playsinline webkit-playsinline muted></video>
-        <video id="vid-gold" src="./layer_gold.mp4" preload="auto" loop crossorigin playsinline webkit-playsinline muted></video>
-        <video id="vid-spring" src="./layer_spring.mp4" preload="auto" loop crossorigin playsinline webkit-playsinline muted></video>
-        <video id="vid-horse" src="./layer_horse.mp4" preload="auto" loop crossorigin playsinline webkit-playsinline muted></video>
-        <video id="vid-front" src="./layer_front.mp4" preload="auto" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-spring" src="./layer_spring.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-horse" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-front" src="./layer_front.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -97,19 +114,19 @@
         <a-video src="#vid-bg" position="0 0 0" height="0.8" width="0.8" rotation="0 0 -45"></a-video>
 
         <a-entity geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-gold; color: 0.0 1.0 0.0; threshold: 0.45" 
+          material="shader: chromakey-debug; src: #vid-gold; color: 0.0 1.0 0.0; mode: 1" 
           position="0 0 0.15" rotation="0 0 -45"></a-entity>
 
         <a-entity geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-spring; color: 0.0 1.0 0.0; threshold: 0.45" 
+          material="shader: chromakey-debug; src: #vid-spring; color: 0.0 1.0 0.0; mode: 2" 
           position="0 0 0.25" rotation="0 0 -45"></a-entity>
 
         <a-entity geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-horse; color: 0.0 1.0 0.0; threshold: 0.45" 
+          material="shader: chromakey-debug; src: #vid-horse; color: 0.0 1.0 0.0; threshold: 0.45; mode: 3" 
           position="0 0 0.35" rotation="0 0 -45"></a-entity>
 
         <a-entity geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-front; color: 0.0 1.0 0.0; threshold: 0.45" 
+          material="shader: chromakey-debug; src: #vid-front; color: 0.0 1.0 0.0; threshold: 0.45; mode: 0" 
           position="0 0 0.55" rotation="0 0 -45"></a-entity>
 
       </a-entity>
