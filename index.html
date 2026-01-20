@@ -5,7 +5,7 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // --- Shader 設定 ---
+      // --- Shader 設定 (維持不變) ---
       AFRAME.registerShader('chroma-key', {
         schema: {
           src: {type: 'map', is: 'uniform'},
@@ -53,7 +53,7 @@
   </head>
 
   <body>
-    <button id="start-btn">播放 (強力去除紅紙黑底)</button>
+    <button id="start-btn">播放 (加入 AlphaTest 強制去黑)</button>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
@@ -76,13 +76,13 @@
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0"
-          material="shader: chroma-key; src: #vid-bg; color: 0 0 0; threshold: 0.4; transparent: true; depthWrite: false">
+          material="shader: chroma-key; src: #vid-bg; color: 0 0 0; threshold: 0.4; transparent: true; alphaTest: 0.5; depthWrite: false">
         </a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0.1"
-          material="shader: chroma-key; src: #vid-gold; color: 0 0 0; threshold: 0.2; transparent: true; depthWrite: false">
+          material="shader: chroma-key; src: #vid-gold; color: 0 0 0; threshold: 0.2; transparent: true; alphaTest: 0.5; depthWrite: false">
         </a-entity>
 
         <a-entity 
@@ -94,7 +94,7 @@
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0.3"
-          material="shader: chroma-key; src: #vid-horse; color: 1 1 1; threshold: 0.2; transparent: true; depthWrite: false">
+          material="shader: chroma-key; src: #vid-horse; color: 1 1 1; threshold: 0.2; transparent: true; alphaTest: 0.5; depthWrite: false">
         </a-entity>
 
       </a-entity>
@@ -102,12 +102,4 @@
 
     <script>
       const startBtn = document.getElementById('start-btn');
-      startBtn.addEventListener('click', function() {
-        document.getElementById('vid-bg').play();
-        document.getElementById('vid-horse').play();
-        document.getElementById('vid-gold').play();
-        startBtn.style.display = 'none';
-      });
-    </script>
-  </body>
-</html>
+      startBtn.
