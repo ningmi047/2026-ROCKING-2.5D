@@ -5,7 +5,9 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // --- 核心濾鏡：Chroma Key Shader (數位剪刀) ---
+      // ==========================================================
+      // 1. 去背 Shader (維持不變)
+      // ==========================================================
       AFRAME.registerShader('chroma-key', {
         schema: {
           src: {type: 'map', is: 'uniform'},
@@ -33,7 +35,42 @@
         `
       });
 
-      // --- 防快取 ---
+      // ==========================================================
+      // 2. 【新功能】影片同步糾察隊 (Video Sync Monitor)
+      // ==========================================================
+      AFRAME.registerComponent('video-sync-monitor', {
+        tick: function () {
+          // 指定 "紅紙背景" 為時間指揮官
+          const master = document.querySelector('#vid-bg');
+          
+          // 指定要跟隨的隊員 (馬、金字)
+          const slaves = [
+            document.querySelector('#vid-horse'),
+            document.querySelector('#vid-gold')
+          ];
+
+          // 如果指揮官還沒開始跑，就什麼都不做
+          if (!master || master.paused || master.currentTime === 0) return;
+
+          slaves.forEach(slave => {
+            if (slave && !slave.paused) {
+              // 計算時間差 (絕對值)
+              const diff = Math.abs(master.currentTime - slave.currentTime);
+              
+              // 如果時間差超過 0.1 秒 (代表不同步了)
+              if (diff > 0.1) {
+                // 強制把隊員的時間設定成跟指揮官一樣
+                slave.currentTime = master.currentTime;
+                console.log("Sync corrected!"); // 修正時偷偷在後台紀錄
+              }
+            }
+          });
+        }
+      });
+
+      // ==========================================================
+      // 3. 防快取機制
+      // ==========================================================
       window.addEventListener('DOMContentLoaded', () => {
         const timestamp = new Date().getTime();
         document.querySelectorAll('video, img').forEach(el => {
@@ -53,9 +90,10 @@
   </head>
 
   <body>
-    <button id="start-btn">點擊播放 (開啟聲音)</button>
+    <button id="start-btn">點擊播放 (強力同步版)</button>
 
     <a-scene 
+      video-sync-monitor
       mindar-image="imageTargetSrc: ./targets.mind;" 
       color-space="sRGB" 
       renderer="colorManagement: true, physicallyCorrectLights" 
@@ -81,19 +119,19 @@
 
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
-          position="0 0 0.02"
+          position="0 0 0.05"
           material="shader: chroma-key; src: #vid-gold; color: 0 0 0; threshold: 0.2; transparent: true; alphaTest: 0.5; depthWrite: false">
         </a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
-          position="0 0 0.08"
+          position="0 0 0.1"
           material="shader: flat; src: #img-static; transparent: true; blending: normal; depthWrite: false">
         </a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
-          position="0 0 0.1"
+          position="0 0 0.15"
           material="shader: chroma-key; src: #vid-horse; color: 1 1 1; threshold: 0.2; transparent: true; alphaTest: 0.5; depthWrite: false">
         </a-entity>
 
@@ -103,25 +141,30 @@
     <script>
       const startBtn = document.getElementById('start-btn');
       startBtn.addEventListener('click', function() {
-        // 取得所有影片元件
         const vBg = document.getElementById('vid-bg');
         const vHorse = document.getElementById('vid-horse');
         const vGold = document.getElementById('vid-gold');
         
-        // 設定音量為 1.0 (最大聲)
+        // 1. 設定音量
         vBg.volume = 1.0;
         vHorse.volume = 1.0;
         vGold.volume = 1.0;
 
-        // 開始播放
-        vBg.play();
-        vHorse.play();
-        vGold.play();
+        // 2. 先把時間全部歸零 (對齊起跑線)
+        vBg.currentTime = 0;
+        vHorse.currentTime = 0;
+        vGold.currentTime = 0;
+
+        // 3. 同時播放
+        // 使用 Promise.all 確保盡量同時觸發
+        Promise.all([vBg.play(), vHorse.play(), vGold.play()]).then(() => {
+          console.log("All videos started");
+        }).catch(e => {
+          console.error("Play error:", e);
+        });
         
-        // 隱藏按鈕
         startBtn.style.display = 'none';
       });
     </script>
   </body>
 </html>
-
