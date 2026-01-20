@@ -1,58 +1,29 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <style>
-      /* 控制台樣式 */
-      #debug-panel {
-        position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-        display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
-        width: 90%; z-index: 9999;
+      body { margin: 0; overflow: hidden; }
+      #debug-ui {
+        position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+        z-index: 9999; display: flex; flex-direction: column; gap: 10px; align-items: center;
       }
-      .debug-btn {
-        padding: 10px 15px; border: 2px solid white; border-radius: 8px;
-        font-weight: bold; cursor: pointer; color: white;
+      button {
+        padding: 12px 24px; font-size: 16px; font-weight: bold;
+        border: 2px solid white; color: white; border-radius: 8px; cursor: pointer;
       }
-      .btn-red { background: #D91E18; }
-      .btn-gold { background: #F39C12; color: black; }
-      .btn-black { background: #333; }
-      .btn-blue { background: blue; }
-      
-      #start-btn {
-        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-        padding: 10px 30px; background: blue; color: white;
-        font-size: 18px; font-weight: bold; border-radius: 50px; z-index: 9999;
-      }
+      .btn-play { background: blue; }
+      .btn-mode { background: #d35400; } /* 橘色按鈕：關鍵測試用 */
     </style>
-
-    <script>
-      // 強制更新影片網址 (防快取)
-      window.addEventListener('DOMContentLoaded', () => {
-        const timestamp = new Date().getTime();
-        document.querySelectorAll('video').forEach(video => {
-          let currentSrc = video.getAttribute('src');
-          if (currentSrc) video.setAttribute('src', currentSrc + '?v=' + timestamp);
-        });
-      });
-    </script>
   </head>
 
   <body>
-    <div id="debug-panel">
-      <button class="debug-btn btn-red" onclick="toggleLayer('layer-bg')">🔴 紅紙開關</button>
-      <button class="debug-btn btn-gold" onclick="toggleLayer('layer-gold')">🟡 金字開關</button>
-      <button class="debug-btn btn-black" onclick="toggleLayer('layer-horse')">⚫ 黑馬開關</button>
-      <button class="debug-btn btn-blue" onclick="testOpacity()">💧 測試透明度</button>
-      <button class="debug-btn btn-blue" onclick="forceBlend()">🧪 強制混合</button>
+    <div id="debug-ui">
+      <button class="btn-play" id="start-btn">▶ 播放影片</button>
+      <button class="btn-mode" onclick="cycleBlending()">🧪 切換去背模式 (目前: Multiply)</button>
     </div>
-
-    <button id="start-btn">點擊播放 (DEBUG版)</button>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
@@ -63,8 +34,8 @@
       
       <a-assets>
         <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        
         <video id="vid-horse" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
-        <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -74,18 +45,12 @@
         <a-entity id="layer-bg"
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0"
-          material="shader: flat; src: #vid-bg; transparent: true; blending: multiply; depthWrite: false">
-        </a-entity>
-
-        <a-entity id="layer-gold"
-          geometry="primitive: plane; height: 1.5; width: 1.5"
-          position="0 0 0.1"
-          material="shader: flat; src: #vid-gold; transparent: true; blending: additive; depthWrite: false">
+          material="shader: flat; src: #vid-bg; transparent: true; blending: normal">
         </a-entity>
 
         <a-entity id="layer-horse"
           geometry="primitive: plane; height: 1.5; width: 1.5"
-          position="0 0 0.2"
+          position="0 0 0.1"
           material="shader: flat; src: #vid-horse; transparent: true; blending: multiply; depthWrite: false">
         </a-entity>
 
@@ -93,53 +58,37 @@
     </a-scene>
 
     <script>
+      // 1. 播放邏輯
       const startBtn = document.getElementById('start-btn');
-      startBtn.addEventListener('click', function() {
+      startBtn.addEventListener('click', () => {
         document.getElementById('vid-bg').play();
         document.getElementById('vid-horse').play();
-        document.getElementById('vid-gold').play();
-        startBtn.style.display = 'none';
+        startBtn.style.display = 'none'; // 播放後隱藏播放鈕
       });
 
-      // --- DEBUG 功能區 ---
+      // 2. 混合模式切換邏輯 (A/B Test)
+      const modes = ['multiply', 'normal', 'additive'];
+      let currentModeIndex = 0; 
 
-      // 1. 開關圖層 (確認兇手是誰)
-      function toggleLayer(id) {
-        const el = document.getElementById(id);
-        const visible = el.getAttribute('visible');
-        el.setAttribute('visible', !visible);
-        console.log(id + ' 可見度:', !visible);
-      }
-
-      // 2. 測試透明度 (確認我們有沒有控制權)
-      function testOpacity() {
-        const el = document.getElementById('layer-gold');
-        // 取得目前的材質設定
+      function cycleBlending() {
+        const el = document.getElementById('layer-horse');
         const mesh = el.getObject3D('mesh');
-        if(mesh && mesh.material) {
-          // 如果現在是 1.0 就變 0.5，反之亦然
-          const currentOp = mesh.material.opacity;
-          const newOp = currentOp >= 0.9 ? 0.5 : 1.0;
-          mesh.material.opacity = newOp;
-          mesh.material.needsUpdate = true;
-          alert('金字透明度已設為: ' + newOp);
-        } else {
-          alert('找不到材質！');
-        }
-      }
+        if (!mesh) return;
 
-      // 3. 強制混合 (暴力切換模式)
-      function forceBlend() {
-        const el = document.getElementById('layer-gold');
-        const mesh = el.getObject3D('mesh');
-        if(mesh && mesh.material) {
-          // 強制設定為 Additive
-          mesh.material.blending = THREE.AdditiveBlending;
-          mesh.material.transparent = true;
-          mesh.material.depthWrite = false;
-          mesh.material.needsUpdate = true;
-          alert('已強制執行 Additive 混合模式！');
-        }
+        currentModeIndex = (currentModeIndex + 1) % modes.length;
+        const newMode = modes[currentModeIndex];
+
+        // 修改材質屬性
+        el.setAttribute('material', 'blending', newMode);
+        
+        // 更新按鈕文字提示
+        const btn = document.querySelector('.btn-mode');
+        let desc = "";
+        if(newMode === 'multiply') desc = "(白底變透明)";
+        if(newMode === 'normal') desc = "(不透明/原始)";
+        if(newMode === 'additive') desc = "(黑底變透明)";
+        
+        btn.innerText = `🧪 切換模式: ${newMode} ${desc}`;
       }
     </script>
   </body>
