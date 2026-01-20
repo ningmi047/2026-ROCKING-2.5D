@@ -3,68 +3,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    
     <style>
       #start-btn {
         position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-        padding: 15px 30px; background: #D91E18; color: white;
-        font-size: 20px; font-weight: bold; border: 2px solid white;
-        border-radius: 50px; z-index: 9999; display: block;
+        padding: 15px 30px; background: red; color: white;
+        font-size: 20px; border-radius: 50px; z-index: 999; display: block;
       }
     </style>
-
-    <script>
-      AFRAME.registerShader('chromakey', {
-        schema: {
-          src: {type: 'map'},
-          color: {default: {x: 0.0, y: 1.0, z: 0.0}},
-          threshold: {default: 0.45}
-        },
-        init: function (data) {
-          this.material = new THREE.ShaderMaterial({
-            uniforms: {
-              texture: { type: 't', value: data.src },
-              color: { type: 'c', value: new THREE.Color(data.color) },
-              threshold: { type: 'f', value: data.threshold }
-            },
-            vertexShader: `
-              varying vec2 vUv;
-              void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-              }
-            `,
-            fragmentShader: `
-              uniform sampler2D texture;
-              uniform vec3 color;
-              uniform float threshold;
-              varying vec2 vUv;
-              void main() {
-                vec4 tex = texture2D( texture, vUv );
-                float dist = length(tex.rgb - color);
-                
-                float alpha = 1.0;
-                if (dist < threshold) {
-                  alpha = 0.0; // 綠色變透明
-                }
-                gl_FragColor = vec4(tex.rgb, alpha);
-              }
-            `,
-            transparent: true,
-            side: THREE.DoubleSide
-          });
-        },
-        update: function (data) {
-          this.material.uniforms.texture.value = data.src;
-          this.material.uniforms.color.value.set(data.color);
-          this.material.uniforms.threshold.value = data.threshold;
-        }
-      });
-    </script>
   </head>
-
   <body>
-    <button id="start-btn">點擊播放測試</button>
+    <button id="start-btn">播放 (裸測版)</button>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
@@ -86,9 +34,8 @@
 
         <a-video 
           src="#vid-horse" 
-          material="shader: chromakey; color: 0.0 1.0 0.0; threshold: 0.45"
           position="0 0 0.2" 
-          height="0.8" width="0.8" 
+          height="0.6" width="0.6" 
           rotation="0 0 -45">
         </a-video>
 
@@ -98,7 +45,11 @@
     <script>
       const startBtn = document.getElementById('start-btn');
       startBtn.addEventListener('click', function() {
-        document.querySelectorAll('video').forEach(v => { v.muted = false; v.play(); });
+        // 強制兩支影片都播放
+        const v1 = document.getElementById('vid-bg');
+        const v2 = document.getElementById('vid-horse');
+        v1.muted = false; v1.play();
+        v2.muted = false; v2.play();
         startBtn.style.display = 'none';
       });
     </script>
