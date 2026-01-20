@@ -5,7 +5,38 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // 依舊保持這個防快取機制
+      // 【核心關鍵】註冊一個自定義的「色鍵去背」材質
+      // 這個程式會強制把影片中的「黑色」變成「透明」，但保留紅色的「實心感」
+      AFRAME.registerShader('chroma-key', {
+        schema: {
+          src: {type: 'map', is: 'uniform'},
+          color: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'}, // 預設去背顏色：黑色
+          threshold: {type: 'number', is: 'uniform', default: 0.1} // 容許值，數字越大去得越多
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D src;
+          uniform vec3 color;
+          uniform float threshold;
+          varying vec2 vUv;
+          void main() {
+            vec4 tex = texture2D(src, vUv);
+            // 計算當前像素跟「目標去背色(黑)」的差距
+            float distance = length(tex.rgb - color);
+            // 如果差距小於容許值，就讓它透明；否則保持原樣
+            float alpha = smoothstep(0.0, threshold, distance);
+            gl_FragColor = vec4(tex.rgb, alpha);
+          }
+        `
+      });
+
+      // 防快取
       window.addEventListener('DOMContentLoaded', () => {
         const timestamp = new Date().getTime();
         document.querySelectorAll('video').forEach(video => {
@@ -14,19 +45,9 @@
         });
       });
     </script>
-
-    <style>
-      #start-btn {
-        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-        padding: 15px 40px; background: red; color: white;
-        font-size: 20px; font-weight: bold; border-radius: 50px; z-index: 9999; border: 2px solid yellow;
-      }
-    </style>
   </head>
 
   <body>
-    <button id="start-btn">播放 (底層黑底/上層白底)</button>
-
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
       color-space="sRGB" 
@@ -37,7 +58,7 @@
       <a-assets>
         <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
         
-        <video id="vid-front" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-horse" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -47,24 +68,22 @@
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0"
-          material="shader: flat; src: #vid-bg; transparent: true; blending: additive; depthWrite: false">
+          material="shader: chroma-key; src: #vid-bg; color: 0 0 0; threshold: 0.2; transparent: true; depthWrite: false">
         </a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0.1"
-          material="shader: flat; src: #vid-front; transparent: true; blending: multiply; depthWrite: false">
+          material="shader: flat; src: #vid-horse; transparent: true; blending: multiply; depthWrite: false">
         </a-entity>
 
       </a-entity>
     </a-scene>
-
+    
     <script>
-      const startBtn = document.getElementById('start-btn');
-      startBtn.addEventListener('click', function() {
+      document.body.addEventListener('click', () => {
         document.getElementById('vid-bg').play();
-        document.getElementById('vid-front').play();
-        startBtn.style.display = 'none';
+        document.getElementById('vid-horse').play();
       });
     </script>
   </body>
