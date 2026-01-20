@@ -5,7 +5,7 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // 強制更新緩存，確保你看到最新的修改
+      // 依舊保持這個防快取機制
       window.addEventListener('DOMContentLoaded', () => {
         const timestamp = new Date().getTime();
         document.querySelectorAll('video').forEach(video => {
@@ -25,7 +25,7 @@
   </head>
 
   <body>
-    <button id="start-btn">播放 (都設為 Multiply 去掉白底)</button>
+    <button id="start-btn">播放 (底層黑底/上層白底)</button>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
@@ -47,7 +47,7 @@
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0"
-          material="shader: flat; src: #vid-bg; transparent: true; blending: multiply; depthWrite: false">
+          material="shader: flat; src: #vid-bg; transparent: true; blending: additive; depthWrite: false">
         </a-entity>
 
         <a-entity 
