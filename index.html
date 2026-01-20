@@ -7,13 +7,16 @@
     <script>
       AFRAME.registerShader('chromakey', {
         schema: {
-          src: {type: 'map'},
-          color: {default: {x: 0.1, y: 0.9, z: 0.2}}, // 這裡設定要扣掉的綠色
+          src: {type: 'selector'}, // ⚠️ 關鍵修正：這裡改成 selector 才能抓到影片
+          color: {default: {x: 0.1, y: 0.9, z: 0.2}},
           transparent: {default: true}
         },
         init: function (data) {
+          // 這裡手動建立 VideoTexture，確保影片能被讀取
           var videoTexture = new THREE.VideoTexture(data.src);
           videoTexture.minFilter = THREE.LinearFilter;
+          videoTexture.format = THREE.RGBAFormat; // 確保支援透明
+          
           this.material = new THREE.ShaderMaterial({
             uniforms: {
               texture: { type: 't', value: videoTexture },
@@ -31,17 +34,20 @@
               uniform vec3 color;
               varying vec2 vUv;
               void main() {
-                vec3 tColor = texture2D( texture, vUv ).rgb;
-                float a = (length(tColor - color) - 0.5) * 7.0;
-                gl_FragColor = vec4(tColor, a);
+                vec4 tColor = texture2D( texture, vUv );
+                // 計算與綠色的距離，如果很接近就變透明
+                float distance = length(tColor.rgb - color);
+                float alpha = smoothstep(0.1, 0.3, distance);
+                gl_FragColor = vec4(tColor.rgb, alpha * tColor.a);
               }
             `,
-            transparent: true
+            transparent: true,
+            side: THREE.DoubleSide // 確保雙面都看得到，避免不小心反面變隱形
           });
         },
         update: function (data) {
           this.material.uniforms.color.value.set(data.color);
-          this.material.uniforms.texture.value.image = data.src;
+          // 這裡不需要重新設定 texture，因為我們直接綁定了影片元素
         }
       });
     </script>
@@ -52,13 +58,9 @@
       
       <a-assets>
         <video id="vid-bg" src="./layer_bg.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline autoplay="true" muted="true"></video>
-
         <video id="vid-gold" src="./layer_gold.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline autoplay="true" muted="true"></video>
-
         <video id="vid-spring" src="./layer_spring.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline autoplay="true" muted="true"></video>
-
         <video id="vid-horse" src="./layer_horse.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline autoplay="true" muted="true"></video>
-
         <video id="vid-front" src="./layer_front.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline autoplay="true" muted="true"></video>
       </a-assets>
 
@@ -69,34 +71,34 @@
         <a-video 
           src="#vid-bg" 
           position="0 0 0" 
-          height="1" width="1" 
+          height="0.8" width="0.8" 
           rotation="0 0 45">
         </a-video>
 
         <a-entity 
-          geometry="primitive: plane; height: 1; width: 1;" 
-          material="shader: chromakey; src: #vid-gold; color: 0.1 0.9 0.2" 
+          geometry="primitive: plane; height: 0.8; width: 0.8;" 
+          material="shader: chromakey; src: #vid-gold; color: 0.0 1.0 0.0" 
           position="0 0 0.15" 
           rotation="0 0 45">
         </a-entity>
 
         <a-entity 
-          geometry="primitive: plane; height: 1; width: 1;" 
-          material="shader: chromakey; src: #vid-spring; color: 0.1 0.9 0.2" 
+          geometry="primitive: plane; height: 0.8; width: 0.8;" 
+          material="shader: chromakey; src: #vid-spring; color: 0.0 1.0 0.0" 
           position="0 0 0.25" 
           rotation="0 0 45">
         </a-entity>
 
         <a-entity 
-          geometry="primitive: plane; height: 1; width: 1;" 
-          material="shader: chromakey; src: #vid-horse; color: 0.1 0.9 0.2" 
+          geometry="primitive: plane; height: 0.8; width: 0.8;" 
+          material="shader: chromakey; src: #vid-horse; color: 0.0 1.0 0.0" 
           position="0 0 0.35" 
           rotation="0 0 45">
         </a-entity>
 
         <a-entity 
-          geometry="primitive: plane; height: 1; width: 1;" 
-          material="shader: chromakey; src: #vid-front; color: 0.1 0.9 0.2" 
+          geometry="primitive: plane; height: 0.8; width: 0.8;" 
+          material="shader: chromakey; src: #vid-front; color: 0.0 1.0 0.0" 
           position="0 0 0.55" 
           rotation="0 0 45">
         </a-entity>
@@ -108,8 +110,8 @@
       document.addEventListener('click', function () {
         var videos = document.querySelectorAll('video');
         videos.forEach(function(video) {
-          video.muted = false;
-          video.play();
+          video.play(); // 強制播放
+          video.muted = false; // 開啟聲音
         });
       }, { once: true });
     </script>
