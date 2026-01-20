@@ -7,20 +7,18 @@
     <script>
       AFRAME.registerShader('chromakey', {
         schema: {
-          src: {type: 'selector'}, // ⚠️ 關鍵修正：這裡改成 selector 才能抓到影片
-          color: {default: {x: 0.1, y: 0.9, z: 0.2}},
-          transparent: {default: true}
+          src: {type: 'map'},
+          color: {default: {x: 0.0, y: 1.0, z: 0.0}}, // 預設純綠色
+          threshold: {default: 0.4}, // ⚠️ 提高容錯率：數值越大，抓綠色抓得越寬鬆
+          smoothness: {default: 0.1}
         },
         init: function (data) {
-          // 這裡手動建立 VideoTexture，確保影片能被讀取
-          var videoTexture = new THREE.VideoTexture(data.src);
-          videoTexture.minFilter = THREE.LinearFilter;
-          videoTexture.format = THREE.RGBAFormat; // 確保支援透明
-          
           this.material = new THREE.ShaderMaterial({
             uniforms: {
-              texture: { type: 't', value: videoTexture },
-              color: { type: 'c', value: new THREE.Color(data.color) }
+              texture: { type: 't', value: null },
+              color: { type: 'c', value: new THREE.Color(data.color) },
+              threshold: { type: 'f', value: data.threshold },
+              smoothness: { type: 'f', value: data.smoothness }
             },
             vertexShader: `
               varying vec2 vUv;
@@ -32,22 +30,31 @@
             fragmentShader: `
               uniform sampler2D texture;
               uniform vec3 color;
+              uniform float threshold;
+              uniform float smoothness;
               varying vec2 vUv;
               void main() {
-                vec4 tColor = texture2D( texture, vUv );
-                // 計算與綠色的距離，如果很接近就變透明
-                float distance = length(tColor.rgb - color);
-                float alpha = smoothstep(0.1, 0.3, distance);
-                gl_FragColor = vec4(tColor.rgb, alpha * tColor.a);
+                vec4 tex = texture2D( texture, vUv );
+                // 計算跟綠色的距離
+                float dist = length(tex.rgb - color);
+                
+                // 產生遮罩 (如果太接近綠色，alpha 就變 0)
+                float alpha = smoothstep(threshold, threshold + smoothness, dist);
+                
+                gl_FragColor = vec4(tex.rgb, alpha * tex.a);
               }
             `,
             transparent: true,
-            side: THREE.DoubleSide // 確保雙面都看得到，避免不小心反面變隱形
+            side: THREE.DoubleSide
           });
         },
         update: function (data) {
           this.material.uniforms.color.value.set(data.color);
-          // 這裡不需要重新設定 texture，因為我們直接綁定了影片元素
+          this.material.uniforms.threshold.value = data.threshold;
+          this.material.uniforms.smoothness.value = data.smoothness;
+          if (data.src) {
+            this.material.uniforms.texture.value = data.src;
+          }
         }
       });
     </script>
@@ -72,35 +79,34 @@
           src="#vid-bg" 
           position="0 0 0" 
           height="0.8" width="0.8" 
-          rotation="0 0 45">
-        </a-video>
+          rotation="0 0 -45"> </a-video>
 
         <a-entity 
           geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-gold; color: 0.0 1.0 0.0" 
+          material="shader: chromakey; src: #vid-gold; color: 0.0 1.0 0.0; threshold: 0.4" 
           position="0 0 0.15" 
-          rotation="0 0 45">
+          rotation="0 0 -45">
         </a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-spring; color: 0.0 1.0 0.0" 
+          material="shader: chromakey; src: #vid-spring; color: 0.0 1.0 0.0; threshold: 0.4" 
           position="0 0 0.25" 
-          rotation="0 0 45">
+          rotation="0 0 -45">
         </a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-horse; color: 0.0 1.0 0.0" 
+          material="shader: chromakey; src: #vid-horse; color: 0.0 1.0 0.0; threshold: 0.4" 
           position="0 0 0.35" 
-          rotation="0 0 45">
+          rotation="0 0 -45">
         </a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 0.8; width: 0.8;" 
-          material="shader: chromakey; src: #vid-front; color: 0.0 1.0 0.0" 
+          material="shader: chromakey; src: #vid-front; color: 0.0 1.0 0.0; threshold: 0.4" 
           position="0 0 0.55" 
-          rotation="0 0 45">
+          rotation="0 0 -45">
         </a-entity>
 
       </a-entity>
@@ -110,10 +116,10 @@
       document.addEventListener('click', function () {
         var videos = document.querySelectorAll('video');
         videos.forEach(function(video) {
-          video.play(); // 強制播放
-          video.muted = false; // 開啟聲音
+          video.play();
+          video.muted = false;
         });
-      }, { once: true });
+      });
     </script>
   </body>
 </html>
