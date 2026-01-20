@@ -1,6 +1,11 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
@@ -12,6 +17,26 @@
         border-radius: 50px; z-index: 9999; display: block;
       }
     </style>
+
+    <script>
+      // 等待頁面載入後執行
+      window.addEventListener('DOMContentLoaded', () => {
+        // 產生一個隨機的時間戳記
+        const timestamp = new Date().getTime();
+        
+        // 抓出所有的 video 標籤
+        const videos = document.querySelectorAll('video');
+        
+        videos.forEach(video => {
+          // 取得原本的檔名 (例如 layer_gold.mp4)
+          let currentSrc = video.getAttribute('src');
+          // 加上時間戳記 (變身為 layer_gold.mp4?v=1738291...)
+          // 這樣瀏覽器就會被迫把它當作新檔案重新下載
+          video.setAttribute('src', currentSrc + '?v=' + timestamp);
+          console.log('強制更新影片來源:', video.getAttribute('src'));
+        });
+      });
+    </script>
   </head>
 
   <body>
@@ -26,9 +51,7 @@
       
       <a-assets>
         <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
-        
         <video id="vid-horse" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
-        
         <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
       </a-assets>
 
@@ -40,21 +63,21 @@
           src="#vid-bg" 
           position="0 0 0" 
           height="1.5" width="1.5" 
-          material="shader: flat; transparent: true; blending: multiply">
+          material="shader: flat; transparent: true; blending: multiply; depthWrite: false">
         </a-video>
 
         <a-video 
           src="#vid-gold"
           position="0 0 0.1" 
           height="1.5" width="1.5" 
-          material="shader: flat; transparent: true; blending: additive">
+          material="shader: flat; transparent: true; blending: additive; depthWrite: false">
         </a-video>
 
         <a-video 
           src="#vid-horse"
           position="0 0 0.2" 
           height="1.5" width="1.5" 
-          material="shader: flat; transparent: true; blending: multiply">
+          material="shader: flat; transparent: true; blending: multiply; depthWrite: false">
         </a-video>
 
       </a-entity>
@@ -63,7 +86,6 @@
     <script>
       const startBtn = document.getElementById('start-btn');
       startBtn.addEventListener('click', function() {
-        // 同時啟動 3 支影片
         document.getElementById('vid-bg').play();
         document.getElementById('vid-horse').play();
         document.getElementById('vid-gold').play();
