@@ -26,7 +26,9 @@
       
       <a-assets>
         <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
-        <video id="vid-main" src="./layer_main.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-horse" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <img id="img-static" src="./layer_static.png" />
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -36,15 +38,28 @@
         <a-video 
           src="#vid-bg" 
           position="0 0 0" 
-          height="0.8" width="0.8" 
-          rotation="0 0 -45">
+          height="1.5" width="1.5" 
+          material="shader: flat; transparent: true; blending: multiply">
         </a-video>
 
         <a-video 
-          src="#vid-main"
+          src="#vid-gold"
+          position="0 0 0.05" 
+          height="1.5" width="1.5" 
+          material="shader: flat; transparent: true; blending: additive">
+        </a-video>
+
+        <a-image 
+          src="#img-static"
+          position="0 0 0.1" 
+          height="1.5" width="1.5"
+          alpha-test="0.5">
+        </a-image>
+
+        <a-video 
+          src="#vid-horse"
           position="0 0 0.2" 
-          height="0.8" width="0.8" 
-          rotation="0 0 -45"
+          height="1.5" width="1.5" 
           material="shader: flat; transparent: true; blending: multiply">
         </a-video>
 
@@ -54,10 +69,10 @@
     <script>
       const startBtn = document.getElementById('start-btn');
       startBtn.addEventListener('click', function() {
-        const v1 = document.getElementById('vid-bg');
-        const v2 = document.getElementById('vid-main');
-        v1.muted = false; v1.play();
-        v2.muted = false; v2.play();
+        // 同時播放 3 支影片
+        document.getElementById('vid-bg').play();
+        document.getElementById('vid-gold').play();
+        document.getElementById('vid-horse').play();
         startBtn.style.display = 'none';
       });
     </script>
