@@ -5,7 +5,7 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // --- Shader 設定 (維持不變) ---
+      // --- 核心濾鏡：Chroma Key Shader (數位剪刀) ---
       AFRAME.registerShader('chroma-key', {
         schema: {
           src: {type: 'map', is: 'uniform'},
@@ -53,7 +53,7 @@
   </head>
 
   <body>
-    <button id="start-btn">播放 (加入 AlphaTest 強制去黑)</button>
+    <button id="start-btn">點擊播放 (開啟聲音)</button>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
@@ -63,9 +63,9 @@
       device-orientation-permission-ui="enabled: false">
       
       <a-assets>
-        <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
-        <video id="vid-horse" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
-        <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline></video>
+        <video id="vid-horse" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline></video>
+        <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline></video>
         <img id="img-static" src="./layer_static.png" />
       </a-assets>
 
@@ -102,4 +102,25 @@
 
     <script>
       const startBtn = document.getElementById('start-btn');
-      startBtn.
+      startBtn.addEventListener('click', function() {
+        // 取得所有影片元件
+        const vBg = document.getElementById('vid-bg');
+        const vHorse = document.getElementById('vid-horse');
+        const vGold = document.getElementById('vid-gold');
+        
+        // 設定音量為 1.0 (最大聲)
+        vBg.volume = 1.0;
+        vHorse.volume = 1.0;
+        vGold.volume = 1.0;
+
+        // 開始播放
+        vBg.play();
+        vHorse.play();
+        vGold.play();
+        
+        // 隱藏按鈕
+        startBtn.style.display = 'none';
+      });
+    </script>
+  </body>
+</html>
