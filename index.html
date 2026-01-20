@@ -4,26 +4,30 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
+    <script>
+      // 強制加上時間戳記，解決瀏覽器快取舊檔案的問題
+      window.addEventListener('DOMContentLoaded', () => {
+        const timestamp = new Date().getTime();
+        console.log("Current Timestamp: " + timestamp);
+        document.querySelectorAll('video').forEach(video => {
+          let currentSrc = video.getAttribute('src');
+          if (currentSrc) video.setAttribute('src', currentSrc + '?v=' + timestamp);
+        });
+      });
+    </script>
+
     <style>
-      body { margin: 0; overflow: hidden; }
-      #debug-ui {
-        position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-        z-index: 9999; display: flex; flex-direction: column; gap: 10px; align-items: center;
+      /* 只有一個播放按鈕，簡單明瞭 */
+      #start-btn {
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        padding: 15px 40px; background: red; color: white;
+        font-size: 20px; font-weight: bold; border-radius: 50px; z-index: 9999; border: 2px solid yellow;
       }
-      button {
-        padding: 12px 24px; font-size: 16px; font-weight: bold;
-        border: 2px solid white; color: white; border-radius: 8px; cursor: pointer;
-      }
-      .btn-play { background: blue; }
-      .btn-mode { background: #d35400; } /* 橘色按鈕：關鍵測試用 */
     </style>
   </head>
 
   <body>
-    <div id="debug-ui">
-      <button class="btn-play" id="start-btn">▶ 播放影片</button>
-      <button class="btn-mode" onclick="cycleBlending()">🧪 切換去背模式 (目前: Multiply)</button>
-    </div>
+    <button id="start-btn">測試：播放紅紙+金字</button>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
@@ -35,61 +39,40 @@
       <a-assets>
         <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
         
-        <video id="vid-horse" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0">
         
-        <a-entity id="layer-bg"
+        <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0"
-          material="shader: flat; src: #vid-bg; transparent: true; blending: normal">
+          material="shader: flat; src: #vid-bg; transparent: false; blending: normal">
         </a-entity>
 
-        <a-entity id="layer-horse"
+        <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0.1"
-          material="shader: flat; src: #vid-horse; transparent: true; blending: multiply; depthWrite: false">
+          material="shader: flat; src: #vid-gold; transparent: true; blending: additive; depthWrite: false">
         </a-entity>
 
       </a-entity>
     </a-scene>
 
     <script>
-      // 1. 播放邏輯
       const startBtn = document.getElementById('start-btn');
-      startBtn.addEventListener('click', () => {
-        document.getElementById('vid-bg').play();
-        document.getElementById('vid-horse').play();
-        startBtn.style.display = 'none'; // 播放後隱藏播放鈕
+      startBtn.addEventListener('click', function() {
+        // 兩個一起播
+        const bg = document.getElementById('vid-bg');
+        const gold = document.getElementById('vid-gold');
+        
+        bg.play();
+        gold.play();
+        
+        startBtn.style.display = 'none'; // 隱藏按鈕
       });
-
-      // 2. 混合模式切換邏輯 (A/B Test)
-      const modes = ['multiply', 'normal', 'additive'];
-      let currentModeIndex = 0; 
-
-      function cycleBlending() {
-        const el = document.getElementById('layer-horse');
-        const mesh = el.getObject3D('mesh');
-        if (!mesh) return;
-
-        currentModeIndex = (currentModeIndex + 1) % modes.length;
-        const newMode = modes[currentModeIndex];
-
-        // 修改材質屬性
-        el.setAttribute('material', 'blending', newMode);
-        
-        // 更新按鈕文字提示
-        const btn = document.querySelector('.btn-mode');
-        let desc = "";
-        if(newMode === 'multiply') desc = "(白底變透明)";
-        if(newMode === 'normal') desc = "(不透明/原始)";
-        if(newMode === 'additive') desc = "(黑底變透明)";
-        
-        btn.innerText = `🧪 切換模式: ${newMode} ${desc}`;
-      }
     </script>
   </body>
 </html>
