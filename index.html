@@ -5,13 +5,12 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // 【核心關鍵】註冊一個自定義的「色鍵去背」材質
-      // 這個程式會強制把影片中的「黑色」變成「透明」，但保留紅色的「實心感」
+      // --- 核心濾鏡：Chroma Key Shader (數位剪刀) ---
       AFRAME.registerShader('chroma-key', {
         schema: {
           src: {type: 'map', is: 'uniform'},
-          color: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'}, // 預設去背顏色：黑色
-          threshold: {type: 'number', is: 'uniform', default: 0.1} // 容許值，數字越大去得越多
+          color: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
+          threshold: {type: 'number', is: 'uniform', default: 0.1}
         },
         vertexShader: `
           varying vec2 vUv;
@@ -27,27 +26,35 @@
           varying vec2 vUv;
           void main() {
             vec4 tex = texture2D(src, vUv);
-            // 計算當前像素跟「目標去背色(黑)」的差距
             float distance = length(tex.rgb - color);
-            // 如果差距小於容許值，就讓它透明；否則保持原樣
             float alpha = smoothstep(0.0, threshold, distance);
             gl_FragColor = vec4(tex.rgb, alpha);
           }
         `
       });
 
-      // 防快取
+      // --- 防快取機制 ---
       window.addEventListener('DOMContentLoaded', () => {
         const timestamp = new Date().getTime();
-        document.querySelectorAll('video').forEach(video => {
-          let currentSrc = video.getAttribute('src');
-          if (currentSrc) video.setAttribute('src', currentSrc + '?v=' + timestamp);
+        document.querySelectorAll('video, img').forEach(el => {
+          let currentSrc = el.getAttribute('src');
+          if (currentSrc) el.setAttribute('src', currentSrc + '?v=' + timestamp);
         });
       });
     </script>
+
+    <style>
+      #start-btn {
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        padding: 15px 40px; background: red; color: white;
+        font-size: 20px; font-weight: bold; border-radius: 50px; z-index: 9999; border: 2px solid yellow;
+      }
+    </style>
   </head>
 
   <body>
+    <button id="start-btn">播放 (完整版)</button>
+
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
       color-space="sRGB" 
@@ -57,8 +64,9 @@
       
       <a-assets>
         <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
-        
         <video id="vid-horse" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        <img id="img-static" src="./layer_static.png" />
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -72,20 +80,34 @@
         </a-entity>
 
         <a-entity 
-          geometry="primitive: plane; height: 1.5; width: 1.5"
+          geometry="primitive: plane; height: 2.0; width: 2.0"
           position="0 0 0.1"
           material="shader: chroma-key; src: #vid-horse; color: 1 1 1; threshold: 0.2; transparent: true; depthWrite: false">
         </a-entity>
 
+        <a-entity 
+          geometry="primitive: plane; height: 1.5; width: 1.5"
+          position="0 0 0.2"
+          material="shader: flat; src: #vid-gold; transparent: true; blending: additive; depthWrite: false">
+        </a-entity>
+
+        <a-entity 
+          geometry="primitive: plane; height: 1.5; width: 1.5"
+          position="0 0 0.3"
+          material="shader: flat; src: #img-static; transparent: true; blending: normal; depthWrite: false">
+        </a-entity>
+
       </a-entity>
-    
+    </a-scene>
+
     <script>
-      document.body.addEventListener('click', () => {
+      const startBtn = document.getElementById('start-btn');
+      startBtn.addEventListener('click', function() {
         document.getElementById('vid-bg').play();
         document.getElementById('vid-horse').play();
+        document.getElementById('vid-gold').play();
+        startBtn.style.display = 'none';
       });
     </script>
   </body>
 </html>
-
-
