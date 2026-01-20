@@ -26,9 +26,10 @@
       
       <a-assets>
         <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
-        <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
+        
         <video id="vid-horse" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
-        <img id="img-static" src="./layer_static.png" />
+        
+        <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline muted></video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -44,17 +45,10 @@
 
         <a-video 
           src="#vid-gold"
-          position="0 0 0.05" 
+          position="0 0 0.1" 
           height="1.5" width="1.5" 
           material="shader: flat; transparent: true; blending: additive">
         </a-video>
-
-        <a-image 
-          src="#img-static"
-          position="0 0 0.1" 
-          height="1.5" width="1.5"
-          alpha-test="0.5">
-        </a-image>
 
         <a-video 
           src="#vid-horse"
@@ -69,10 +63,10 @@
     <script>
       const startBtn = document.getElementById('start-btn');
       startBtn.addEventListener('click', function() {
-        // 同時播放 3 支影片
+        // 同時啟動 3 支影片
         document.getElementById('vid-bg').play();
-        document.getElementById('vid-gold').play();
         document.getElementById('vid-horse').play();
+        document.getElementById('vid-gold').play();
         startBtn.style.display = 'none';
       });
     </script>
