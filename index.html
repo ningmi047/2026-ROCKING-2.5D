@@ -9,37 +9,30 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <style>
+      /* 控制台樣式 */
+      #debug-panel {
+        position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+        display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+        width: 90%; z-index: 9999;
+      }
+      .debug-btn {
+        padding: 10px 15px; border: 2px solid white; border-radius: 8px;
+        font-weight: bold; cursor: pointer; color: white;
+      }
+      .btn-red { background: #D91E18; }
+      .btn-gold { background: #F39C12; color: black; }
+      .btn-black { background: #333; }
+      .btn-blue { background: blue; }
+      
       #start-btn {
         position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-        padding: 15px 30px; 
-        background: blue; /* 維持藍色，方便你確認是否有更新 */
-        color: white;
-        font-size: 20px; font-weight: bold; border: 2px solid white;
-        border-radius: 50px; z-index: 9999; display: block;
+        padding: 10px 30px; background: blue; color: white;
+        font-size: 18px; font-weight: bold; border-radius: 50px; z-index: 9999;
       }
     </style>
 
     <script>
-      // 👇 這是專門用來「暴力修正」材質的元件
-      AFRAME.registerComponent('force-additive', {
-        init: function () {
-          const el = this.el;
-          
-          // 當材質貼圖載入後，強制修改混合模式
-          el.addEventListener('materialtextureloaded', () => {
-            const mesh = el.getObject3D('mesh');
-            if (mesh && mesh.material) {
-              console.log("🔥 強制啟動金字發光模式 (Additive) 🔥");
-              mesh.material.blending = THREE.AdditiveBlending;
-              mesh.material.transparent = true;
-              mesh.material.depthWrite = false; // 關鍵：不寫入深度，避免擋住後方
-              mesh.material.needsUpdate = true;
-            }
-          });
-        }
-      });
-
-      // 防快取機制
+      // 強制更新影片網址 (防快取)
       window.addEventListener('DOMContentLoaded', () => {
         const timestamp = new Date().getTime();
         document.querySelectorAll('video').forEach(video => {
@@ -51,7 +44,15 @@
   </head>
 
   <body>
-    <button id="start-btn">點擊播放</button>
+    <div id="debug-panel">
+      <button class="debug-btn btn-red" onclick="toggleLayer('layer-bg')">🔴 紅紙開關</button>
+      <button class="debug-btn btn-gold" onclick="toggleLayer('layer-gold')">🟡 金字開關</button>
+      <button class="debug-btn btn-black" onclick="toggleLayer('layer-horse')">⚫ 黑馬開關</button>
+      <button class="debug-btn btn-blue" onclick="testOpacity()">💧 測試透明度</button>
+      <button class="debug-btn btn-blue" onclick="forceBlend()">🧪 強制混合</button>
+    </div>
+
+    <button id="start-btn">點擊播放 (DEBUG版)</button>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
@@ -70,20 +71,19 @@
 
       <a-entity mindar-image-target="targetIndex: 0">
         
-        <a-entity 
+        <a-entity id="layer-bg"
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0"
           material="shader: flat; src: #vid-bg; transparent: true; blending: multiply; depthWrite: false">
         </a-entity>
 
-        <a-entity 
+        <a-entity id="layer-gold"
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0.1"
-          material="shader: flat; src: #vid-gold; transparent: true; blending: additive; depthWrite: false"
-          force-additive>
+          material="shader: flat; src: #vid-gold; transparent: true; blending: additive; depthWrite: false">
         </a-entity>
 
-        <a-entity 
+        <a-entity id="layer-horse"
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0.2"
           material="shader: flat; src: #vid-horse; transparent: true; blending: multiply; depthWrite: false">
@@ -100,6 +100,47 @@
         document.getElementById('vid-gold').play();
         startBtn.style.display = 'none';
       });
+
+      // --- DEBUG 功能區 ---
+
+      // 1. 開關圖層 (確認兇手是誰)
+      function toggleLayer(id) {
+        const el = document.getElementById(id);
+        const visible = el.getAttribute('visible');
+        el.setAttribute('visible', !visible);
+        console.log(id + ' 可見度:', !visible);
+      }
+
+      // 2. 測試透明度 (確認我們有沒有控制權)
+      function testOpacity() {
+        const el = document.getElementById('layer-gold');
+        // 取得目前的材質設定
+        const mesh = el.getObject3D('mesh');
+        if(mesh && mesh.material) {
+          // 如果現在是 1.0 就變 0.5，反之亦然
+          const currentOp = mesh.material.opacity;
+          const newOp = currentOp >= 0.9 ? 0.5 : 1.0;
+          mesh.material.opacity = newOp;
+          mesh.material.needsUpdate = true;
+          alert('金字透明度已設為: ' + newOp);
+        } else {
+          alert('找不到材質！');
+        }
+      }
+
+      // 3. 強制混合 (暴力切換模式)
+      function forceBlend() {
+        const el = document.getElementById('layer-gold');
+        const mesh = el.getObject3D('mesh');
+        if(mesh && mesh.material) {
+          // 強制設定為 Additive
+          mesh.material.blending = THREE.AdditiveBlending;
+          mesh.material.transparent = true;
+          mesh.material.depthWrite = false;
+          mesh.material.needsUpdate = true;
+          alert('已強制執行 Additive 混合模式！');
+        }
+      }
     </script>
   </body>
 </html>
