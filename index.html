@@ -5,7 +5,7 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
-      // --- 核心濾鏡：Chroma Key Shader (數位剪刀) ---
+      // --- Shader 設定 ---
       AFRAME.registerShader('chroma-key', {
         schema: {
           src: {type: 'map', is: 'uniform'},
@@ -33,7 +33,7 @@
         `
       });
 
-      // --- 防快取機制 ---
+      // --- 防快取 ---
       window.addEventListener('DOMContentLoaded', () => {
         const timestamp = new Date().getTime();
         document.querySelectorAll('video, img').forEach(el => {
@@ -53,7 +53,7 @@
   </head>
 
   <body>
-    <button id="start-btn">播放 (完整版)</button>
+    <button id="start-btn">播放 (強力去除紅紙黑底)</button>
 
     <a-scene 
       mindar-image="imageTargetSrc: ./targets.mind;" 
@@ -76,25 +76,25 @@
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0"
-          material="shader: chroma-key; src: #vid-bg; color: 0 0 0; threshold: 0.2; transparent: true; depthWrite: false">
+          material="shader: chroma-key; src: #vid-bg; color: 0 0 0; threshold: 0.4; transparent: true; depthWrite: false">
         </a-entity>
 
         <a-entity 
-          geometry="primitive: plane; height: 2.0; width: 2.0"
+          geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0.1"
-          material="shader: chroma-key; src: #vid-horse; color: 1 1 1; threshold: 0.2; transparent: true; depthWrite: false">
+          material="shader: chroma-key; src: #vid-gold; color: 0 0 0; threshold: 0.2; transparent: true; depthWrite: false">
         </a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0.2"
-          material="shader: flat; src: #vid-gold; transparent: true; blending: additive; depthWrite: false">
+          material="shader: flat; src: #img-static; transparent: true; blending: normal; depthWrite: false">
         </a-entity>
 
         <a-entity 
           geometry="primitive: plane; height: 1.5; width: 1.5"
           position="0 0 0.3"
-          material="shader: flat; src: #img-static; transparent: true; blending: normal; depthWrite: false">
+          material="shader: chroma-key; src: #vid-horse; color: 1 1 1; threshold: 0.2; transparent: true; depthWrite: false">
         </a-entity>
 
       </a-entity>
