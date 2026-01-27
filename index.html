@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <title>WebAR Fix</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <script>
       // ==========================================================
-      // 1. 去背 Shader (維持不變)
+      // 1. 去背 Shader (修復版：移除了導致崩潰的 smoothness)
       // ==========================================================
       AFRAME.registerShader('chroma-key', {
         schema: {
@@ -26,8 +28,8 @@
           uniform sampler2D src;
           uniform vec3 color;
           uniform float threshold;
-          uniform float smoothness; // 雖然這裡沒定義 smoothness 但舊版能跑就不動它
           varying vec2 vUv;
+          
           void main() {
             vec4 tex = texture2D(src, vUv);
             float distance = length(tex.rgb - color);
@@ -38,12 +40,124 @@
       });
 
       // ==========================================================
-      // 2. 影片同步糾察隊 (維持不變)
+      // 2. 影片同步糾察隊
       // ==========================================================
       AFRAME.registerComponent('video-sync-monitor', {
         tick: function () {
           const master = document.querySelector('#vid-bg');
+          // 這裡增加了錯誤檢查，如果找不到物件就不執行，避免報錯
+          if (!master) return; 
+
           const slaves = [
             document.querySelector('#vid-horse'),
+            document.querySelector('#vid-gold')
+          ];
 
+          if (master.paused || master.currentTime === 0) return;
 
+          slaves.forEach(slave => {
+            if (slave && !slave.paused) {
+              const diff = Math.abs(master.currentTime - slave.currentTime);
+              if (diff > 0.1) {
+                slave.currentTime = master.currentTime;
+              }
+            }
+          });
+        }
+      });
+
+      // ==========================================================
+      // 3. 防快取機制
+      // ==========================================================
+      window.addEventListener('DOMContentLoaded', () => {
+        const timestamp = new Date().getTime();
+        document.querySelectorAll('video, img').forEach(el => {
+          let currentSrc = el.getAttribute('src');
+          if (currentSrc) el.setAttribute('src', currentSrc + '?v=' + timestamp);
+        });
+      });
+    </script>
+
+    <style>
+      #start-btn {
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        padding: 15px 40px; background: red; color: white;
+        font-size: 20px; font-weight: bold; border-radius: 50px; z-index: 9999; border: 2px solid yellow;
+      }
+    </style>
+  </head>
+
+  <body>
+    <button id="start-btn">點擊播放</button>
+
+    <a-scene 
+      video-sync-monitor
+      mindar-image="imageTargetSrc: ./targets.mind;" 
+      color-space="sRGB" 
+      renderer="colorManagement: true, physicallyCorrectLights" 
+      vr-mode-ui="enabled: false" 
+      device-orientation-permission-ui="enabled: false">
+      
+      <a-assets>
+        <video id="vid-bg" src="./layer_bg.mp4" loop crossorigin playsinline webkit-playsinline></video>
+        <video id="vid-horse" src="./layer_horse.mp4" loop crossorigin playsinline webkit-playsinline></video>
+        <video id="vid-gold" src="./layer_gold.mp4" loop crossorigin playsinline webkit-playsinline></video>
+        <img id="img-static" src="./layer_static.png" />
+      </a-assets>
+
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <a-entity mindar-image-target="targetIndex: 0">
+        
+        <a-entity 
+          geometry="primitive: plane; height: 1.05; width: 1.05"
+          position="0 0 0"
+          material="shader: chroma-key; src: #vid-bg; color: 0 0 0; threshold: 0.4; transparent: true; alphaTest: 0.5; depthWrite: false">
+        </a-entity>
+
+        <a-entity 
+          geometry="primitive: plane; height: 1.05; width: 1.05"
+          position="0 0 0.03"
+          material="shader: chroma-key; src: #vid-gold; color: 0 0 0; threshold: 0.2; transparent: true; alphaTest: 0.5; depthWrite: false">
+        </a-entity>
+
+        <a-entity 
+          geometry="primitive: plane; height: 1.05; width: 1.05"
+          position="0 0 0.1"
+          material="shader: flat; src: #img-static; transparent: true; blending: normal; depthWrite: false">
+        </a-entity>
+
+        <a-entity 
+          geometry="primitive: plane; height: 1.05; width: 1.05"
+          position="0 0 0.13"
+          material="shader: chroma-key; src: #vid-horse; color: 1 1 1; threshold: 0.2; transparent: true; alphaTest: 0.5; depthWrite: false">
+        </a-entity>
+
+      </a-entity>
+    </a-scene>
+
+    <script>
+      const startBtn = document.getElementById('start-btn');
+      startBtn.addEventListener('click', function() {
+        const vBg = document.getElementById('vid-bg');
+        const vHorse = document.getElementById('vid-horse');
+        const vGold = document.getElementById('vid-gold');
+        
+        vBg.volume = 1.0;
+        vHorse.volume = 1.0;
+        vGold.volume = 1.0;
+
+        vBg.currentTime = 0;
+        vHorse.currentTime = 0;
+        vGold.currentTime = 0;
+
+        // 簡單暴力播放
+        vBg.play();
+        vHorse.play();
+        vGold.play();
+        
+        startBtn.style.display = 'none';
+      });
+    </script>
+  </body>
+</html>
